@@ -1,3 +1,5 @@
-langchain
-pinecone-client
+langchain==0.0.150
+pinecone-client==2.2.1
 black
+tiktoken==0.3.3  # needed by openai for embeddings
+openai==0.27.5
