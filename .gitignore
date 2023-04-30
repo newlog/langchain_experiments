@@ -1,4 +1,6 @@
 .idea
+langchain_docs
+.DS_Store
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
