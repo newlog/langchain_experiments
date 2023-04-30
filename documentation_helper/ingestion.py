@@ -11,23 +11,29 @@ from typing import NoReturn
 from langchain.schema import Document
 from langchain.vectorstores.base import VectorStore
 
+from documentation_helper.globals import PINECONE_INDEX_NAME
+
 
 def insert_docs_vectors() -> NoReturn:
     initialize_pinecone()
     documents = load_text_data()
-    print(f'Loaded {len(documents)} from LangChain documentation')
+    print(f"Loaded {len(documents)} from LangChain documentation")
     documents = split_documents(documents)
-    print(f'Split into {len(documents)} documents')
+    print(f"Split into {len(documents)} documents")
     embeddings = create_embeddings_instance()
     vector_store = insert_to_vectordb(documents, embeddings)
 
 
 def initialize_pinecone() -> NoReturn:
-    pinecone.init(api_key=os.environ.get('PINECONE_API_KEY'), environment="us-west1-gcp-free")
+    pinecone.init(
+        api_key=os.environ.get("PINECONE_API_KEY"), environment="us-west1-gcp-free"
+    )
 
 
 def load_text_data() -> list[Document]:
-    loader = ReadTheDocsLoader(path='./langchain_docs/python.langchain.com/en/latest')
+    loader = ReadTheDocsLoader(
+        path="./langchain_docs/python.langchain.com/en/latest", encoding="latin"
+    )
     return loader.load()
 
 
@@ -35,12 +41,15 @@ def split_documents(documents: list[Document]) -> list[Document]:
     # Chunk size of 400 tokens. Every chunk can share a max of 50 tokens, and the chunks
     # will be separated based on the specified separators (in order of list priority)
     # https://python.langchain.com/en/latest/modules/indexes/text_splitters/examples/recursive_text_splitter.html
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=50, separators=['\n\n', '\n', ' ', ''])
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=400, chunk_overlap=50, separators=["\n\n", "\n", " ", ""]
+    )
     documents = text_splitter.split_documents(documents=documents)
+    # We do this replacement so if we show the sources for a response from an LLM, the links will point to the hosted version of the docs
     for doc in documents:
-        old_path = doc.metadata['source']
-        new_url = old_path.replace('langchain_docs', 'https:/')
-        doc.metadata.update({'source': new_url})
+        old_path = doc.metadata["source"]
+        new_url = old_path.replace("langchain_docs", "https:/")
+        doc.metadata.update({"source": new_url})
     return documents
 
 
@@ -61,10 +70,10 @@ def insert_to_vectordb(
     # It seems like embeddings might be different even though the texts are the same. Or maybe the texts are different because
     # the splitting is not deterministic (TBD).
     vectorstore = Pinecone.from_documents(
-        texts, embeddings, index_name="langchain-docs-index"
+        texts, embeddings, index_name=PINECONE_INDEX_NAME
     )
     return vectorstore
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     insert_docs_vectors()
