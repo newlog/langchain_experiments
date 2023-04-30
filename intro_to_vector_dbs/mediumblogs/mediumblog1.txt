@@ -1,0 +1,108 @@
+Vector Databases, Large Language Models and Case Based Reasoning
+
+In 2018, language models burst onto the scene with BERT (Bidirectional Encoder Representations from Transformers) (Jacob et-al 2018). Essentially, researchers found that they could use an unsupervised training method to create a model that would generate semantically sensitive embeddings for sentences of text.
+
+To understand why that was a big deal, it is necessary to understand the terms expressed in that sentence.
+
+What is a model that generates an ‘embedding’?
+Figure 1. shows a basic example of a very simple embedding. Essentially, an embedding is a concept space with as many different dimensions / concepts as are important. In the example, the space is two dimensional in colourfulness and size, which are chosen to describe a number of cartoon animals. Elephants and giraffes are big. Mice and lobsters are small. Mice and elephants are dull / colourless, whilst lobsters and giraffes are bright and colourful. These ideas can be represented as a sliding scale. For colour 0.0 marks a very dull animal and 1.0 marks a really bright and colourful one. On the size dimension, 0.0 is very small, whilst 1.0 is very large. So, the poor little mouse has a vector (this is just a set of co-ordinates) in the size / colour embedding of (0.01,0.01). People have decided to call this categorisation an embedding… I’m not sure why.
+
+
+Figure 1. A very simple embedding example that allows the description of animals in terms of their size and colour.
+This approach is interesting for two reasons. The first is that if you have lots of examples of animals that are labelled big / small and dull / colourful then it is possible to train a neural network to generate the embedding from an example animal — an example of supervised training. The loss function for the network is just how far the embeddings are from the actual labels. If the network is now shown a picture of a rhino, then it might be able to generate an embedding of (0.9,0.01), which shows that the network can position it as a “very big, but very dull looking animal”.
+
+What is important about unsupervised training?
+Supervised training of this sort is very powerful when lots of labelled data is available — so long as the tacit information in the animal data is available to allow the network to link the concepts to the examples it is shown. Researchers in Natural Language Programming (NLP) realised that an unsupervised training method could be created by masking words or sets of words in sentences and defining the training loss function as the ability of the network to predict those words. This meant that they could let a network train an embedding ability for snippets of text.
+
+This kind of network is now known as a language model (LM) or increasingly as a large language model (LLM). In the case of LLM, the embedding space is not merely big / colourful, it is 768 (for many of the BERT family of models) dimensions that separate text in terms of its semantics.
+
+This change was in motion before the BERT paper was published. Things like the Luminoso project from MIT and Word2Vec were useful precursors. However, BERT was a gamechanger because it was trained on Facebook’s machine learning resources and really demonstrated that LLMs could be used to make useful inferences about the meaning of natural language snippets. Of course, since then it has become apparent that many LLMs suffer from very nasty problems of bias which make them dangerous to use in many circumstances. For example, do not blindly use LLMs to screen CVs or to read medical notes. On the other hand, an understanding of the risks and dangers that can arise in the application of LLM is evolving in the AI community (Weidinger et-al 2021, OpenAI 2022) and the steps that can be taken to mitigate and avoid harm. In addition there is still a vast sweep of applications which have lower potential to harm or restrict users’ life chances, such as providing assistance in retrieving documentation, or flagging the need to conform to regulation.
+
+One other part of the technology picture that has come onto the scene is vector databases or similarity indexes. To understand these, it is important to appreciate the problem that they are trying to solve.
+
+Imagine you have an embedding such as:
+
+A={0.8793, 0.2334, 0.0233, 0.3552, 0.3321}
+
+And you want to check which of the following is the closest match to it:
+
+B={0.8793, 0.2334, 0.0233, 0.2452, 0.3321},
+
+C={0.5793, 0.3334, 0.0233, 0.8552, 0.3321},
+
+D={0.3647, 0.3647, 0.3647, 0.3647, 0.3647},
+
+E={0.3657, 0.3637, 0.3667, 0.3627, 0.3647}
+
+How do you determine which embedding is ‘closer’? The mean value of the components in the vectors isn’t very useful — D and E are closer on that measure than B and C, yet B and C have a number of members that are identical to A’s members, indicating that the meaning of the embedding A and B and C in *those* dimensions is exactly the same. So, instead, might it be better to exhaustively compare each member of each vector to the target and decide on a ranking that way?
+
+
+
+Figure 2 comparing some vectors in a 2D space using Euclidian and Cosine distance.
+Typically, we can use the cosine similarity between the vectors. This expresses their relative position in the space defined by the vector size (the number of co-ordinates possible) and has the nice property of normalising the scale of differences and representing just the angles between them which means that it’s . Alas, the problem is that for thousands of vectors each hundreds of members long, these calculations process could take a while. If you have millions of vectors it would take a very long time indeed, which is inconvenient for most applications.
+
+It’s not easy to do this upfront by creating an index for large sets of vectors either. If you had 100 vectors then things are ok, you can just run the calculation 10000 times for every pair in the data set and look up the results. If the calculation takes 1000th of a second then the index can be created in 10 seconds. Woe, woe, and thrice woe to you if you have 1,000,000 candidate vectors though because you are going to have to run (and store) 1,000,000,000,000 calculations which is going to take 1,000,000,000 seconds. That’s about 32 years.
+
+Of course, we can get a machine that’s got 1,000 processors and do the indexing in 11 ½ days, but that’s still quite boring. Maybe we could make the processors 100 times faster as well and bring things down to 15 or so minutes, but unfortunately a million candidates is a relatively small set in the world of vectors and “things” in general. For example, there are more than 3 billion tokens in the Wikipedia text training set, and 410 billion in the Common Crawl set, of course if you are creating a dot product style index you also have the challenge of storing it and then looking things up in it. This challenge is extreme if have 410 billon * 409 billion entries in the index to deal with.
+
+So, unless you have days and weeks (or years) of time to spend and vast storage resources creating indexes using dot products or cosine similarities is just not on.
+
+Happily, vector databases can rescue us here because computer scientists have been designing heuristic algorithms that can find the closest matches in the list very quickly. They can do this because the heuristics that they use can sometimes be somewhat wrong. This might mean that we expect to get an answer that is within 10% of the best possible answer for 90% of the checks that are made.
+
+The defining technology in the vector database world is an indexing and search system called FAISS that Facebook released as open source in 2017 (Johnson et-al 2017) . Since then, a number of groups have wrapped FAISS with more ‘database’ functionality — for example Milvus and Pinecone, or have built alternatives from the ground up like the Jina effort.
+
+So, we have the ability to generate embeddings over unstructured data and we have the ability to search through these quickly at scale — so what opportunities does this make possible?
+
+Case-based reasoning (CBR) V2.0!
+Case-based reasoning was a popular style of artificial intelligence in the late 1990s. Essentially, CBR worked by the preparation of a database of examples of situations, and advice on actions in those situations. When presented with a situation, the case-based reasoner tried to find the most similar case in its knowledge case. It then retrieved the advice associated with the case and presented it to the user.
+
+An example that the CBR community used to illustrate this idea was to consider what a car mechanic did to solve problems with a troublesome vehicle. The car is behaving in an odd way, steam is coming out and it is making an odd noise — how does the mechanic know what’s going on? Simple, the have seen this before. When this happened last time, it was because the radiator had fractured and the car was overheating as a result. The successful action was to stop the car before it seized up, replace the radiator and replenish the coolant. The mechanic has a ‘case-base’ of thousands of such experiences, and knows what to do for all of them. Why therefore was this logic not able to be replicated in a machine?
+
+
+Figure 3. A mechanic identifying an issue and remembering what to do (https://pixabay.com/vectors/oil-change-changing-oil-mechanic-36096/?download)
+There were actually a number of reasons. The first was that assembling the case base was very expensive, boring and difficult. Making the correct choices about defining the different cases turned out to be hard and there was a tremendous amount of hand coding required to get the cases into machine readable form.
+
+The second problem was case-retrieval. Matching one case to another was surprisingly difficult — often requiring strange fuzzy matching techniques. The algorithms used at the time were slow and erratic, often featuring my favourite AI killer, “the paradox of committed choice” which I often use as a line of conversation to entertain people I meet at parties! Although for some reason I don’t get to go to many parties nowadays.
+
+The computers running these algorithms at the time were also frankly pathetic, so struggled to cope with the challenge. And worse was the fact that users had to go through elaborate questionnaires to enter the details of the current case, answering questions such as “is more than 50 litres per second of steam escaping from the small relief valve?” This had the potential to fox users and dissuade them from using the system.
+
+The killer problem though, was known as ‘case-adaptation’. If a new case was found and added to the knowledge base, it sometimes destabilised things. Surprising search results would occur, and they would occur in parts of the case-base that should not have been disrupted.
+
+The promise of CBR was that it would provide a transparent and explainable mode of reasoning. If the case identified was patently different from the case that the user was working on, then it could be rejected and the next nearest case selected and that advice tried. The user could bridge the situation that they found themselves confronted with and understand why the computer was telling them to do a particular thing. The technical difficulties were frustrating because this was a great idea, one that gave humans a way to understand the rationality of the machine that they were dealing with.
+
+The point is that we can now use LLM and vector databases to build modern CBR systems, and guess what? These new-fangled CBRs don’t suffer from the problems of the ‘old school’ version.
+
+The case-bases can be as simple as:
+
+“customer email” (case) and “agent-response” (advice)
+
+“photo of fault” and “required action”
+
+“network telemetry” and “affected users”
+
+The fact that the case is created from unstructured data is convenient because it means that the painful pre-processing and hand coding of manual case-bases is done away with. This allows the case-base to scale to millions of examples (potentially), and of course cases can be presented as unstructured data as well, such as:
+
+“received email” ->most similar email + most similar response-> “proposed response”
+
+“photo of fault” ->most similar fault + recommended action ->“required action”
+
+“network telemetry” -> closest previous + affected users -> “users to contact”
+
+The embedding and indexing process covers off the old-fashioned spurious matching systems and can now scale to millions of items at sub-second speeds.
+
+However, CBR is just one application pattern; others exist as well — search and matching, similarity detection and clustering. In a future blog, I will show an example of how the embedding and indexing pattern can be used to create insights into corpuses of text. What is clear from experimenting with this technology, and using it to deliver a significant project in a major corporate client, is that it is practical and scalable.
+
+There are some outstanding issues. The databased elements of vector databases are much less developed than the indexing methods, and managing index updates and maintaining the index over time is not well catered for. In addition, determining the right configuration of model and index type is artisanal and introduces unwanted project risks (this needs to be figured out early on to prevent nerve-racking revelations about performance late in the project).
+
+Most problematic for us so far has been the memory footprints that large indexes with large embeddings create. It is not unusual to create a 100GB index, which is fine in a one-off solution — just buy a proper server or instance with 256GB or more of RAM. However, for standard corporate IT solutions it can be a big issue. It is not uncommon for virtual machine’s to be limited to 32GB or even 16GB and getting exemptions can be challenging.
+
+The development of the CBR pattern and the way it is maturing as more robust and capable models become available has been exciting to watch. Applying it successfully for our customers to solve their challenges is proving to be extremely satisfying.
+
+References
+Johnson, Jeff, Matthijs Douze, and Hervé Jégou. “Billion-scale similarity search with gpus.” IEEE Transactions on Big Data 7, no. 3 (2019): 535–547.
+
+Devlin, Jacob, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. “Bert: Pre-training of deep bidirectional transformers for language understanding.” arXiv preprint arXiv:1810.04805 (2018).
+
+Open AI : Lessons Learned on Language Model Safety and Misuse https://openai.com/blog/language-model-safety-and-misuse/ (2022)
+
+Weidinger, Laura, John Mellor, Maribeth Rauh, Conor Griffin, Jonathan Uesato, Po-Sen Huang, Myra Cheng et al. “Ethical and social risks of harm from Language Models.” arXiv preprint arXiv:2112.04359 (2021).
